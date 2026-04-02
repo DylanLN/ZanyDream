@@ -469,42 +469,46 @@ let VOCAB = {
 };
 
 async function loadVocabFromCSV() {
-  const localPath = './vocab.csv';
-  const ghPath = 'https://dylanln.github.io/ZanyDream/vocab.csv';
+  const candidates = [
+    'vocab.csv',
+    './vocab.csv',
+    `${location.origin}${location.pathname.replace(/\/[^/]*$/, '/') || '/'}vocab.csv`,
+    'https://dylanln.github.io/ZanyDream/vocab.csv'
+  ];
 
-  // 1. 如果是 file:// 协议，优先用本地文件
-  // 2. 其它环境优先用相对路径，避免分支写死
-  const base = location.protocol === 'file:' ? '' : (location.origin + location.pathname.replace(/\/[^/]*$/, '/'));
-  let vocabPath = (location.protocol === 'file:' ? localPath : base + 'vocab.csv');
-
-  async function tryFetch(path) {
-    const res = await fetch(path);
-    if (!res.ok) throw new Error(`fetch ${path} status ${res.status}`);
+  async function fetchText(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`fetch ${url} status ${res.status}`);
     return await res.text();
   }
 
-  try {
-    let text;
+  let text = '';
+  for (const url of candidates) {
     try {
-      text = await tryFetch(vocabPath);
+      console.log('尝试加载词库：', url);
+      text = await fetchText(url);
+      console.log('词库加载成功：', url);
+      break;
     } catch (e) {
-      // 如果第一条失败，按 Github 备选
-      text = await tryFetch(ghPath);
+      console.warn('词库加载失败：', url, e.message);
     }
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(",");
-      const cat = parts[0]?.trim();
-      const type = parts[2]?.trim();
-      const word = parts[3]?.trim();
-      if (!cat || !type || !word) continue;
-      if (type === 'mod') VOCAB[cat]?.mods.push(word);
-      if (type === 'word') VOCAB[cat]?.words.push(word);
-    }
-  } catch (e) {
-    console.error('词库加载失败', e);
-    // 更友好的提示
-    document.getElementById('vocab-foot').textContent = '词库加载失败，请检查 vocab.csv 是否可访问。';
+  }
+
+  if (!text) {
+    console.error('所有词库路径均失败');
+    document.getElementById('vocab-foot').textContent = '词库加载失败，请确认 vocab.csv 已上载并可访问（Network 面板查看 URL）';
+    return;
+  }
+
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',');
+    const cat = parts[0]?.trim();
+    const type = parts[2]?.trim();
+    const word = parts[3]?.trim();
+    if (!cat || !type || !word) continue;
+    if (type === 'mod') VOCAB[cat]?.mods.push(word);
+    if (type === 'word') VOCAB[cat]?.words.push(word);
   }
 }
 
