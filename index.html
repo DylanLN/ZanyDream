@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>提示词生成器 - 按方块顺序排序版</title>
+<title>癫梦</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -377,19 +377,119 @@ body {
   min-height: 80px;
   background: var(--bg2);
 }
-.output-body .shot-line { color: var(--text); font-weight: 500; }
-.output-body .empty-line { color: var(--text3); }
+.output_body .empty-line { color: var(--text3); }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg3); }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+</style>
+<style>
+/* 移动端响应式适配 */
+@media (max-width: 600px) {
+  .app {
+    max-width: 100vw;
+    padding: 0;
+  }
+  body {
+    padding: 4px;
+    font-size: 16px;
+  }
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 6px;
+  }
+  .app-title {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+  .mode-group, .actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gsel, .search-input, .mtab, .btn, .sbtn {
+    font-size: 16px;
+    min-height: 38px;
+  }
+  .search-input {
+    width: 90px;
+    font-size: 15px;
+  }
+  .vocab-panel, .output-panel, .shot-card {
+    border-radius: 0;
+    border-width: 1px 0 1px 0;
+  }
+  .vocab-top, .mod-row, .word-row, .vocab-foot, .output-head, .output-body, .shot-head, .tag-zone {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .cat-tabs {
+    gap: 2px;
+  }
+  .ctab {
+    padding: 0 10px;
+    font-size: 15px;
+    height: 38px;
+  }
+  .mod-row, .word-row {
+    gap: 6px;
+  }
+  .wpill, .mod-pill {
+    font-size: 15px;
+    padding: 5px 10px;
+  }
+  .shot-head {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 8px;
+  }
+  .shot-num {
+    font-size: 15px;
+    padding: 3px 8px;
+  }
+  .time-inp {
+    width: 36px;
+    font-size: 15px;
+    padding: 4px 4px;
+  }
+  .tag-zone {
+    min-height: 44px;
+    gap: 6px;
+    font-size: 15px;
+  }
+  .tag {
+    font-size: 15px;
+    padding: 4px 8px 4px 10px;
+  }
+  .btn, .btn-pri, .btn-copy {
+    font-size: 16px;
+    padding: 10px 0;
+    min-width: 0;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  .actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .output-body {
+    font-size: 15px;
+    padding: 10px;
+    min-height: 60px;
+  }
+  .word-row {
+    min-height: 90px;
+    max-height: 210px;
+  }
+}
 </style>
 </head>
 <body>
 <div class="app">
 
   <div class="top-bar">
-    <span class="app-title">✦ 提示词生成器</span>
+    <span class="app-title">✦ 癫梦</span>
     <div class="mode-group">
       <button class="mtab active" onclick="setMode('image',this)">图片</button>
       <button class="mtab" onclick="setMode('video',this)">视频</button>
@@ -697,7 +797,7 @@ function generate() {
     const e = card.querySelector('.end-inp').value;
     const tags = Array.from(card.querySelectorAll('.tag')).map(t => t.dataset.text).filter(Boolean);
     const timeLabel = currentMode === 'video' ? `（${s}s - ${e}s）` : '';
-    const content = tags.length ? tags.join('，') : '（空）';
+    const content = tags.length ? tags.join(' ') : '（空）';
     lines.push(`• 镜头${i + 1}${timeLabel}\n${content}`);
   });
 
