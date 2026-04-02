@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>提示词生成器 - 按方块顺序排序版</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f9fafb;
+  --bg2: #ffffff;
+  --bg3: #f1f3f5;
+  --bg4: #e9ecef;
+  --border: #dee2e6;
+  --border2: #ced4da;
+  --text: #212529;
+  --text2: #495057;
+  --text3: #868e96;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --c-subj: #7B68EE;
+  --c-act:  #34A853;
+  --c-scene:#F9AB00;
+  --c-shot: #12B3CB;
+  --c-move: #EA4335;
+  --c-light:#80868B;
+  --c-atm:  #9C27B0;
+  --c-fx:   #3B82F6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.app { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+.top-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 10px 16px;
+}
+.app-title { 
+  font-size: 16px; 
+  font-weight: 700; 
+  color: var(--text); 
+  letter-spacing: .04em; 
+  margin-right: 10px; 
+}
+.mode-group { display: flex; gap: 6px; }
+.mtab {
+  padding: 6px 14px; 
+  font-size: 14px; 
+  font-weight: 500; 
+  border-radius: 20px;
+  border: 1px solid var(--border2); 
+  background: none; 
+  cursor: pointer; 
+  color: var(--text2);
+  font-family: inherit; 
+  transition: all .15s;
+}
+.mtab.active { background: var(--c-subj); color: #fff; border-color: var(--c-subj); }
+.sep { width: 1px; height: 24px; background: var(--border2); margin: 0 6px; }
+.gsel {
+  padding: 6px 10px; 
+  font-size: 14px; 
+  border-radius: var(--radius); 
+  border: 1px solid var(--border2);
+  background: var(--bg3); 
+  color: var(--text2); 
+  cursor: pointer; 
+  font-family: inherit; 
+  outline: none;
+}
+.gsel:focus { border-color: var(--c-subj); }
+
+.vocab-panel {
+  background: var(--bg2); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-lg); 
+  overflow: hidden;
+}
+
+.vocab-top {
+  display: flex; 
+  align-items: stretch; 
+  border-bottom: 1px solid var(--border);
+}
+
+.search-wrap {
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  padding: 0 16px; 
+  border-right: 1px solid var(--border); 
+  flex: 0 0 auto;
+}
+.search-icon { color: var(--text3); font-size: 15px; }
+.search-input {
+  width: 180px; 
+  padding: 10px 0; 
+  font-size: 14px; 
+  border: none; 
+  background: none;
+  color: var(--text); 
+  outline: none; 
+  font-family: inherit;
+}
+.search-input::placeholder { color: var(--text3); }
+
+.cat-tabs { display: flex; overflow-x: auto; flex: 1; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.ctab {
+  padding: 0 20px; 
+  height: 42px; 
+  font-size: 14px; 
+  font-weight: 500;
+  cursor: pointer; 
+  white-space: nowrap; 
+  border: none; 
+  background: none;
+  color: var(--text3); 
+  border-bottom: 2px solid transparent;
+  font-family: inherit; 
+  transition: color .15s, border-color .15s; 
+  flex-shrink: 0;
+}
+.ctab:hover { color: var(--text2); }
+.ctab.active { color: #fff; }
+.ctab[data-cat="subj"].active { border-bottom-color: var(--c-subj); color: var(--c-subj); }
+.ctab[data-cat="act"].active  { border-bottom-color: var(--c-act);  color: var(--c-act); }
+.ctab[data-cat="scene"].active{ border-bottom-color: var(--c-scene);color: var(--c-scene); }
+.ctab[data-cat="shot"].active { border-bottom-color: var(--c-shot); color: var(--c-shot); }
+.ctab[data-cat="move"].active { border-bottom-color: var(--c-move); color: var(--c-move); }
+.ctab[data-cat="light"].active{ border-bottom-color: var(--c-light);color: var(--c-light); }
+.ctab[data-cat="atm"].active  { border-bottom-color: var(--c-atm);  color: var(--c-atm); }
+.ctab[data-cat="fx"].active   { border-bottom-color: var(--c-fx);   color: var(--c-fx); }
+
+.mod-row {
+  min-height: 40px; 
+  max-height: 80px;
+  padding: 8px 16px; 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 8px; 
+  align-items: center;
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg3);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.mod-row::-webkit-scrollbar { width: 6px; }
+.mod-row::-webkit-scrollbar-track { background: var(--bg4); border-radius: 4px; }
+.mod-row::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 4px; }
+
+.mod-label { 
+  font-size: 13px; 
+  color: var(--text3); 
+  margin-right: 6px; 
+  white-space: nowrap; 
+  flex-shrink: 0;
+}
+.mod-pill {
+  padding: 4px 12px; 
+  font-size: 14px; 
+  border-radius: 20px; 
+  cursor: pointer;
+  border: 1px solid var(--border2); 
+  background: none; 
+  color: var(--text2);
+  font-family: inherit; 
+  transition: all .12s; 
+  user-select: none;
+  flex-shrink: 0;
+}
+.mod-pill:hover { border-color: var(--border2); color: var(--text); background: var(--bg4); }
+.mod-pill.sel { color: #fff; border-color: transparent; }
+
+.word-row {
+  min-height: 60px; 
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 10px 16px; 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 8px; 
+  align-content: flex-start;
+}
+.word-row::-webkit-scrollbar { width: 6px; }
+.word-row::-webkit-scrollbar-track { background: var(--bg3); }
+.word-row::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+
+.wpill {
+  padding: 6px 14px; 
+  font-size: 14px; 
+  border-radius: 20px; 
+  cursor: pointer;
+  transition: transform .1s, filter .1s; 
+  user-select: none; 
+  font-weight: 400;
+}
+.wpill:hover { transform: scale(1.06); filter: brightness(0.95); }
+.wpill:active { transform: scale(.97); }
+.wpill-subj { background: rgba(123,104,238,.1); color: var(--c-subj); border: 1px solid rgba(123,104,238,.2); }
+.wpill-act  { background: rgba(52,168,83,.1); color: var(--c-act); border: 1px solid rgba(52,168,83,.2); }
+.wpill-scene{ background: rgba(249,171,0,.1); color: var(--c-scene); border: 1px solid rgba(249,171,0,.2); }
+.wpill-shot { background: rgba(18,179,203,.1); color: var(--c-shot); border: 1px solid rgba(18,179,203,.2); }
+.wpill-move { background: rgba(234,67,53,.1); color: var(--c-move); border: 1px solid rgba(234,67,53,.2); }
+.wpill-light{ background: rgba(128,134,139,.1); color: var(--c-light); border: 1px solid rgba(128,134,139,.2); }
+.wpill-atm  { background: rgba(156,39,176,.1); color: var(--c-atm); border: 1px solid rgba(156,39,176,.2); }
+.wpill-fx   { background: rgba(59,130,246,.1); color: var(--c-fx); border: 1px solid rgba(59,130,246,.2); }
+
+.vocab-foot {
+  padding: 6px 16px 8px; 
+  font-size: 13px; 
+  color: var(--text3);
+  border-top: 1px solid var(--border); 
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
+}
+.no-results { color: var(--text3); font-size: 14px; padding: 16px 0; width: 100%; text-align: center; }
+
+.shots-wrap { display: flex; flex-direction: column; gap: 10px; }
+.shot-card {
+  background: var(--bg2); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-lg); 
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.shot-card.is-active { border-color: var(--border2); }
+
+.shot-head {
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg3);
+}
+.shot-num {
+  font-size: 13px; 
+  font-weight: 700; 
+  padding: 4px 10px; 
+  border-radius: 20px;
+  background: var(--bg4); 
+  color: var(--text2); 
+  letter-spacing: .04em;
+}
+.time-wrap { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+.time-inp {
+  width: 40px; 
+  padding: 4px 6px; 
+  font-size: 14px; 
+  text-align: center;
+  border: 1px solid var(--border2); 
+  border-radius: 4px;
+  background: var(--bg2); 
+  color: var(--text); 
+  outline: none; 
+  font-family: inherit;
+}
+.time-inp:focus { border-color: var(--c-subj); }
+.time-sep { color: var(--text3); font-size: 13px; }
+.time-unit { font-size: 13px; color: var(--text3); }
+.shot-actions { margin-left: auto; display: flex; gap: 6px; }
+.sbtn {
+  padding: 5px 12px; 
+  font-size: 13px; 
+  border-radius: 5px; 
+  border: 1px solid var(--border2);
+  background: var(--bg3); 
+  color: var(--text2); 
+  cursor: pointer; 
+  font-family: inherit; 
+  transition: all .12s;
+}
+.sbtn:hover { background: var(--bg4); color: var(--text); }
+.sbtn-del:hover { border-color: var(--c-move); color: var(--c-move); }
+
+.tag-zone {
+  padding: 10px 16px; 
+  min-height: 60px; 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 8px;
+  align-items: center; 
+  cursor: pointer; 
+  transition: background .15s;
+}
+.tag-zone.active {
+  background: rgba(123,104,238,.05);
+  box-shadow: inset 2px 0 0 var(--c-subj);
+}
+.zone-hint { 
+  font-size: 13px; 
+  color: var(--text3); 
+  pointer-events: none; 
+}
+
+.tag {
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  padding: 4px 10px 4px 12px;
+  border-radius: 5px; 
+  font-size: 14px; 
+  font-weight: 500; 
+  color: #fff; 
+  cursor: default;
+}
+.tag-del { cursor: pointer; opacity: .8; font-size: 14px; line-height: 1; transition: opacity .1s; }
+.tag-del:hover { opacity: 1; }
+
+.tag-subj { background: rgba(123,104,238,.85); }
+.tag-act  { background: rgba(52,168,83,.85); }
+.tag-scene{ background: rgba(249,171,0,.85); }
+.tag-shot { background: rgba(18,179,203,.85); }
+.tag-move { background: rgba(234,67,53,.85); }
+.tag-light{ background: rgba(128,134,139,.85); }
+.tag-atm  { background: rgba(156,39,176,.85); }
+.tag-fx   { background: rgba(59,130,246,.85); }
+
+.actions { display: flex; gap: 10px; align-items: center; }
+.btn {
+  padding: 8px 16px; 
+  font-size: 14px; 
+  font-weight: 500; 
+  border-radius: var(--radius);
+  border: 1px solid var(--border2); 
+  background: var(--bg3); 
+  color: var(--text2);
+  cursor: pointer; 
+  font-family: inherit; 
+  transition: all .15s;
+}
+.btn:hover { background: var(--bg4); color: var(--text); }
+.btn-pri { background: var(--c-subj); color: #fff; border-color: var(--c-subj); }
+.btn-pri:hover { filter: brightness(0.95); }
+.btn-copy { background: var(--bg4); }
+
+.output-panel {
+  background: var(--bg2); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.output-head {
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  padding: 10px 16px; 
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg3);
+}
+.output-title { 
+  font-size: 14px; 
+  font-weight: 500; 
+  color: var(--text2); 
+}
+.output-body {
+  padding: 16px; 
+  font-size: 14px; 
+  line-height: 2; 
+  color: var(--text);
+  white-space: pre-wrap; 
+  min-height: 80px;
+  background: var(--bg2);
+}
+.output-body .shot-line { color: var(--text); font-weight: 500; }
+.output-body .empty-line { color: var(--text3); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg3); }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top-bar">
+    <span class="app-title">✦ 提示词生成器</span>
+    <div class="mode-group">
+      <button class="mtab active" onclick="setMode('image',this)">图片</button>
+      <button class="mtab" onclick="setMode('video',this)">视频</button>
+    </div>
+    <div class="sep"></div>
+    <select class="gsel" id="g_style">
+      <option value="">风格</option>
+      <option>古风</option><option>写实</option><option>赛博朋克</option>
+      <option>玄幻</option><option>水墨</option><option>动漫</option>
+    </select>
+    <select class="gsel" id="g_color">
+      <option value="">色调</option>
+      <option>冷色</option><option>暖色</option><option>紫色</option>
+      <option>金色</option><option>黑白</option>
+    </select>
+    <select class="gsel" id="g_quality">
+      <option value="">画质</option>
+      <option>电影级</option><option>4K</option><option>8K</option>
+    </select>
+    <select class="gsel" id="g_ratio" style="display:none">
+      <option value="">比例</option>
+      <option>16:9</option><option>9:16</option><option>2.35:1</option>
+    </select>
+    <select class="gsel" id="g_fps" style="display:none">
+      <option value="">帧率</option>
+      <option>24fps</option><option>30fps</option><option>60fps</option>
+    </select>
+  </div>
+
+  <div class="vocab-panel">
+    <div class="vocab-top">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="search-input" placeholder="搜索词汇…" autocomplete="off">
+      </div>
+      <div class="cat-tabs" id="cat-tabs"></div>
+    </div>
+    <div class="mod-row" id="mod-row">
+      <span class="mod-label">修饰词</span>
+    </div>
+    <div class="word-row" id="word-row"></div>
+    <div class="vocab-foot" id="vocab-foot"></div>
+  </div>
+
+  <div class="shots-wrap" id="shots-wrap"></div>
+
+  <div class="actions">
+    <button class="btn" onclick="addShot()">＋ 添加镜头</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-copy" onclick="copyOutput()">📋 复制</button>
+    <button class="btn btn-pri" onclick="generate()">✅ 生成提示词</button>
+  </div>
+
+  <div class="output-panel">
+    <div class="output-head">
+      <span class="output-title">输出结果</span>
+      <span id="output-mode-badge" style="font-size:13px;color:var(--text3)">图片模式</span>
+    </div>
+    <div class="output-body" id="output-body">点击「生成提示词」查看结果…</div>
+  </div>
+
+</div>
+
+<script>
+// ======================
+// 表格词库（CSV 加载，Excel可编辑）
+// ======================
+let VOCAB = {
+  subj: { label: "主体", mods: [], words: [] },
+  act: { label: "动作", mods: [], words: [] },
+  scene: { label: "场景", mods: [], words: [] },
+  shot: { label: "景别", mods: [], words: [] },
+  move: { label: "运镜", mods: [], words: [] },
+  light: { label: "光影", mods: [], words: [] },
+  atm: { label: "氛围", mods: [], words: [] },
+  fx: { label: "特效", mods: [], words: [] }
+};
+
+async function loadVocabFromCSV() {
+  try {
+    const response = await fetch("vocab.csv");
+    const text = await response.text();
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(",");
+      const cat = parts[0]?.trim();
+      const type = parts[2]?.trim();
+      const text = parts[3]?.trim();
+      if (!cat || !type || !text) continue;
+      if (type === "mod") VOCAB[cat]?.mods.push(text);
+      if (type === "word") VOCAB[cat]?.words.push(text);
+    }
+  } catch (e) {
+    console.error("词库加载失败", e);
+  }
+}
+
+const CAT_KEYS = ['subj','act','scene','shot','move','light','atm','fx'];
+const TAG_CLS = {subj:'tag-subj',act:'tag-act',scene:'tag-scene',shot:'tag-shot',move:'tag-move',light:'tag-light',atm:'tag-atm',fx:'tag-fx'};
+const WPILL_CLS = {subj:'wpill-subj',act:'wpill-act',scene:'wpill-scene',shot:'wpill-shot',move:'wpill-move',light:'wpill-light',atm:'wpill-atm',fx:'wpill-fx'};
+const MOD_SEL_COLOR = {subj:'#7C6EF8',act:'#3AAF6F',scene:'#E8A020',shot:'#18BBCC',move:'#E05545',light:'#8090A0',atm:'#A855C8',fx:'#3B82F6'};
+
+let currentCat = 'subj';
+let selectedMod = '';
+let activeZoneEl = null;
+let shotCount = 0;
+let currentMode = 'image';
+
+function initTabs() {
+  const container = document.getElementById('cat-tabs');
+  CAT_KEYS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'ctab' + (cat === currentCat ? ' active' : '');
+    btn.dataset.cat = cat;
+    btn.textContent = VOCAB[cat].label;
+    btn.onclick = () => switchCat(cat);
+    container.appendChild(btn);
+  });
+}
+
+function switchCat(cat) {
+  currentCat = cat;
+  selectedMod = '';
+  document.querySelectorAll('.ctab').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  document.getElementById('search-input').value = '';
+  renderMods();
+  renderWords('');
+}
+
+function renderMods() {
+  const row = document.getElementById('mod-row');
+  row.innerHTML = '<span class="mod-label">修饰词</span>';
+  const mods = VOCAB[currentCat].mods || [];
+  if (!mods.length) {
+    row.innerHTML += '<span style="font-size:13px;color:var(--text3)">无修饰词</span>';
+    return;
+  }
+  mods.forEach(m => {
+    const p = document.createElement('span');
+    p.className = 'mod-pill';
+    p.textContent = m;
+    p.onclick = () => toggleMod(m, p);
+    row.appendChild(p);
+  });
+}
+
+function toggleMod(m, el) {
+  if (selectedMod === m) {
+    selectedMod = '';
+    el.classList.remove('sel');
+    el.style.background = '';
+  } else {
+    document.querySelectorAll('.mod-pill').forEach(p => { p.classList.remove('sel'); p.style.background = ''; });
+    selectedMod = m;
+    el.classList.add('sel');
+    el.style.background = MOD_SEL_COLOR[currentCat];
+  }
+}
+
+function renderWords(q) {
+  const row = document.getElementById('word-row');
+  row.innerHTML = '';
+  const words = VOCAB[currentCat].words;
+  const filtered = q ? words.filter(w => w.includes(q)) : words;
+  if (!filtered.length) {
+    row.innerHTML = '<span class="no-results">没有匹配的词汇</span>';
+    document.getElementById('vocab-foot').textContent = '无结果';
+    return;
+  }
+  filtered.forEach(w => {
+    const p = document.createElement('span');
+    p.className = 'wpill ' + WPILL_CLS[currentCat];
+    p.textContent = w;
+    p.onclick = () => addWordToZone(w);
+    row.appendChild(p);
+  });
+  const modHint = selectedMod ? ` · 修饰词已选：${selectedMod}` : '';
+  document.getElementById('vocab-foot').textContent = `共 ${filtered.length} 个词${q ? ' · 搜索"' + q + '"' : ''}${modHint}`;
+}
+
+function addWordToZone(word) {
+  if (!activeZoneEl) { alert('请先点击一个镜头区域激活'); return; }
+  const text = selectedMod ? `${selectedMod}${word}` : word;
+  const tag = document.createElement('div');
+  tag.className = 'tag ' + TAG_CLS[currentCat];
+  tag.dataset.cat = currentCat;
+  tag.dataset.text = text;
+  tag.innerHTML = `${text}<span class="tag-del" onclick="this.parentElement.remove()">×</span>`;
+  activeZoneEl.querySelectorAll('.zone-hint').forEach(h => h.remove());
+  activeZoneEl.appendChild(tag);
+}
+
+function addShot() {
+  shotCount++;
+  const idx = shotCount;
+  const start = (idx - 1) * 4;
+  const end = idx * 4;
+
+  const card = document.createElement('div');
+  card.className = 'shot-card';
+  card.id = `shot-${idx}`;
+  card.innerHTML = `
+    <div class="shot-head">
+      <span class="shot-num">镜头 ${idx}</span>
+      <div class="time-wrap">
+        <input class="time-inp start-inp" value="${start}" title="开始秒数">
+        <span class="time-sep">—</span>
+        <input class="time-inp end-inp" value="${end}" title="结束秒数">
+        <span class="time-unit">秒</span>
+      </div>
+      <div class="shot-actions">
+        <button class="sbtn" onclick="clearZone(this)">清空</button>
+        <button class="sbtn sbtn-del" onclick="deleteShot(this)">删除</button>
+      </div>
+    </div>
+    <div class="tag-zone" data-shot="${idx}">
+      <span class="zone-hint">点击激活此镜头 → 再从词库选词添加</span>
+    </div>
+  `;
+  const zone = card.querySelector('.tag-zone');
+  zone.addEventListener('click', () => activateZone(zone, card));
+  document.getElementById('shots-wrap').appendChild(card);
+  activateZone(zone, card);
+}
+
+function activateZone(zone, card) {
+  document.querySelectorAll('.tag-zone').forEach(z => z.classList.remove('active'));
+  document.querySelectorAll('.shot-card').forEach(c => c.classList.remove('is-active'));
+  zone.classList.add('active');
+  card.classList.add('is-active');
+  activeZoneEl = zone;
+}
+
+function clearZone(btn) {
+  const zone = btn.closest('.shot-card').querySelector('.tag-zone');
+  zone.querySelectorAll('.tag').forEach(t => t.remove());
+  if (!zone.querySelector('.zone-hint')) {
+    zone.innerHTML = '<span class="zone-hint">点击激活此镜头 → 再从词库选词添加</span>';
+  }
+}
+
+function deleteShot(btn) {
+  const card = btn.closest('.shot-card');
+  if (activeZoneEl && card.contains(activeZoneEl)) activeZoneEl = null;
+  card.remove();
+  renumberShots();
+}
+
+function renumberShots() {
+  document.querySelectorAll('.shot-card').forEach((card, i) => {
+    card.querySelector('.shot-num').textContent = `镜头 ${i + 1}`;
+  });
+}
+
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const isVideo = mode === 'video';
+  document.getElementById('g_ratio').style.display = isVideo ? '' : 'none';
+  document.getElementById('g_fps').style.display = isVideo ? '' : 'none';
+  document.getElementById('output-mode-badge').textContent = isVideo ? '视频模式' : '图片模式';
+}
+
+function generate() {
+  const cards = document.querySelectorAll('.shot-card');
+  if (!cards.length) { document.getElementById('output-body').textContent = '请先添加镜头'; return; }
+
+  const global = [
+    document.getElementById('g_style').value,
+    document.getElementById('g_color').value,
+    document.getElementById('g_quality').value,
+    currentMode === 'video' ? document.getElementById('g_ratio').value : '',
+    currentMode === 'video' ? document.getElementById('g_fps').value : '',
+  ].filter(Boolean);
+
+  const lines = [];
+  cards.forEach((card, i) => {
+    const s = card.querySelector('.start-inp').value;
+    const e = card.querySelector('.end-inp').value;
+    const tags = Array.from(card.querySelectorAll('.tag')).map(t => t.dataset.text).filter(Boolean);
+    const timeLabel = currentMode === 'video' ? `（${s}s - ${e}s）` : '';
+    const content = tags.length ? tags.join('，') : '（空）';
+    lines.push(`• 镜头${i + 1}${timeLabel}\n${content}`);
+  });
+
+  if (global.length) lines.push(`\n统一：${global.join('，')}`);
+  lines.push('\n负面：无模糊，无变形，无多余肢体，无噪点，无水印，无畸变，无杂乱背景');
+
+  document.getElementById('output-body').textContent = lines.join('\n\n');
+}
+
+function copyOutput() {
+  const text = document.getElementById('output-body').textContent;
+  if (text === '点击「生成提示词」查看结果…') { alert('请先生成提示词'); return; }
+  navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板！'));
+}
+
+document.getElementById('search-input').addEventListener('input', e => renderWords(e.target.value.trim()));
+
+(async () => {
+  await loadVocabFromCSV();
+  initTabs();
+  renderMods();
+  renderWords('');
+  addShot();
+})();
+</script>
+</body>
+</html>
