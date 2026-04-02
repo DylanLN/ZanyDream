@@ -469,21 +469,42 @@ let VOCAB = {
 };
 
 async function loadVocabFromCSV() {
+  const localPath = './vocab.csv';
+  const ghPath = 'https://dylanln.github.io/ZanyDream/vocab.csv';
+
+  // 1. 如果是 file:// 协议，优先用本地文件
+  // 2. 其它环境优先用相对路径，避免分支写死
+  const base = location.protocol === 'file:' ? '' : (location.origin + location.pathname.replace(/\/[^/]*$/, '/'));
+  let vocabPath = (location.protocol === 'file:' ? localPath : base + 'vocab.csv');
+
+  async function tryFetch(path) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`fetch ${path} status ${res.status}`);
+    return await res.text();
+  }
+
   try {
-    const response = await fetch("vocab.csv");
-    const text = await response.text();
+    let text;
+    try {
+      text = await tryFetch(vocabPath);
+    } catch (e) {
+      // 如果第一条失败，按 Github 备选
+      text = await tryFetch(ghPath);
+    }
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     for (let i = 1; i < lines.length; i++) {
       const parts = lines[i].split(",");
       const cat = parts[0]?.trim();
       const type = parts[2]?.trim();
-      const text = parts[3]?.trim();
-      if (!cat || !type || !text) continue;
-      if (type === "mod") VOCAB[cat]?.mods.push(text);
-      if (type === "word") VOCAB[cat]?.words.push(text);
+      const word = parts[3]?.trim();
+      if (!cat || !type || !word) continue;
+      if (type === 'mod') VOCAB[cat]?.mods.push(word);
+      if (type === 'word') VOCAB[cat]?.words.push(word);
     }
   } catch (e) {
-    console.error("词库加载失败", e);
+    console.error('词库加载失败', e);
+    // 更友好的提示
+    document.getElementById('vocab-foot').textContent = '词库加载失败，请检查 vocab.csv 是否可访问。';
   }
 }
 
